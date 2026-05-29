@@ -1,0 +1,48 @@
+diff --git a/node_modules/react-native-macos/local-cli/runMacOS/runMacOS.js b/node_modules/react-native-macos/local-cli/runMacOS/runMacOS.js
+index 889380b..f09ab8f 100644
+--- a/node_modules/react-native-macos/local-cli/runMacOS/runMacOS.js
++++ b/node_modules/react-native-macos/local-cli/runMacOS/runMacOS.js
+@@ -117,7 +117,7 @@ function runMacOS(_, ctx, args) {
+ async function run(sourceDir, xcodeProject, scheme, args) {
+   await buildProject(sourceDir, xcodeProject, scheme, args);
+ 
+-  const buildSettings = getBuildSettings(xcodeProject, args.mode, scheme);
++  const buildSettings = getBuildSettings(xcodeProject, args.mode, scheme, sourceDir);
+   const appPath = path.join(
+     buildSettings.TARGET_BUILD_DIR,
+     buildSettings.FULL_PRODUCT_NAME,
+@@ -236,13 +236,15 @@ function buildProject(sourceDir, xcodeProject, scheme, args) {
+  * @param {string} scheme
+  * @returns {{ FULL_PRODUCT_NAME: string, INFOPLIST_PATH: string, TARGET_BUILD_DIR: string }}
+  */
+-function getBuildSettings(xcodeProject, configuration, scheme) {
++function getBuildSettings(xcodeProject, configuration, scheme, sourceDir) {
+   const settings = JSON.parse(
+     child_process.execFileSync(
+       'xcodebuild',
+       [
+         xcodeProject.isWorkspace ? '-workspace' : '-project',
+-        xcodeProject.name,
++        sourceDir
++          ? path.join(sourceDir, xcodeProject.path || '.', xcodeProject.name)
++          : xcodeProject.name,
+         '-scheme',
+         scheme,
+         '-sdk',
+diff --git a/node_modules/react-native-macos/src/private/animated/NativeAnimatedHelper.js b/node_modules/react-native-macos/src/private/animated/NativeAnimatedHelper.js
+index fac5756..c90f753 100644
+--- a/node_modules/react-native-macos/src/private/animated/NativeAnimatedHelper.js
++++ b/node_modules/react-native-macos/src/private/animated/NativeAnimatedHelper.js
+@@ -430,7 +430,11 @@ export default {
+       nativeEventEmitter = new NativeEventEmitter(
+         // T88715063: NativeEventEmitter only used this parameter on iOS. Now it uses it on all platforms, so this code was modified automatically to preserve its behavior
+         // If you want to use the native module on other platforms, please remove this condition and test its behavior
+-        Platform.OS !== 'ios' ? null : NativeAnimatedModule,
++        // [macOS] NativeEventEmitter requires a non-null module on macOS too (see
++        // NativeEventEmitter constructor), so pass NativeAnimatedModule for macos.
++        Platform.OS !== 'ios' && Platform.OS !== 'macos'
++          ? null
++          : NativeAnimatedModule,
+       );
+     }
+     return nativeEventEmitter;
