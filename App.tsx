@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SpotifyLoginController } from './src/SpotifyLoginController';
 import { SpotifyApiClient } from './src/services/SpotifyApiClient';
+import { NowPlayingCard } from './src/components/NowPlayingCard';
+import { useNowPlaying } from './src/hooks/useNowPlaying';
 import { SpotifyTokens } from './src/types';
 
 function App(): React.JSX.Element {
@@ -18,6 +20,9 @@ function App(): React.JSX.Element {
   const [tokens, setTokens] = useState<SpotifyTokens | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Live "Now Playing" polling, active only once authenticated.
+  const { playback, error: playbackError } = useNowPlaying(!!tokens);
 
   // 2. Button Action Handler (Equivalent to an async function triggered by a SwiftUI button)
   const handleSpotifyConnect = async () => {
@@ -49,15 +54,15 @@ function App(): React.JSX.Element {
         <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
 
         {tokens ? (
-          <View style={styles.statusSuccessCard}>
-            <Text style={styles.successText}>✅ Connected to Spotify Cloud</Text>
-            {profileName && (
-              <Text style={styles.successText}>👤 {profileName}</Text>
-            )}
-            <Text style={styles.tokenDataText} numberOfLines={1}>
-              Token: {tokens.accessToken}
-            </Text>
-          </View>
+          <>
+            <View style={styles.statusSuccessCard}>
+              <Text style={styles.successText}>✅ Connected to Spotify Cloud</Text>
+              {profileName && (
+                <Text style={styles.successText}>👤 {profileName}</Text>
+              )}
+            </View>
+            <NowPlayingCard playback={playback} error={playbackError} />
+          </>
         ) : (
           <TouchableOpacity 
             style={styles.connectButton} 

@@ -7,5 +7,8 @@ export const SPOTIFY_CONFIG = {
     'playlist-modify-public',
     'playlist-modify-private',
     'playlist-read-private',
+    // Required to read the DJ's active playback for the NowPlayingCard.
+    'user-read-currently-playing',
+    'user-read-playback-state',
   ].join(' '),
 };
