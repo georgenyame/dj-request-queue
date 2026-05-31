@@ -4,6 +4,7 @@ import { SPOTIFY_CONFIG } from './spotifyConfig';
 import { SpotifyAuthManager } from './SpotifyAuthManager';
 import { SpotifyTokens } from './types';
 import { generateCodeVerifier, generateCodeChallenge } from './pkce';
+import { SpotifyTokenStore } from './services/SpotifyTokenStore';
 
 export class SpotifyLoginController {
   /**
@@ -66,6 +67,9 @@ export class SpotifyLoginController {
             params.code,
             codeVerifier,
           );
+          // Persist into the shared store so the API client can authenticate
+          // and refresh without any React state plumbing.
+          SpotifyTokenStore.getInstance().setTokens(tokens);
           resolve(tokens);
         } catch (exchangeError) {
           reject(exchangeError);

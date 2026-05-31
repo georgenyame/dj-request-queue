@@ -9,23 +9,31 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SpotifyLoginController } from './src/SpotifyLoginController';
+import { SpotifyApiClient } from './src/services/SpotifyApiClient';
 import { SpotifyTokens } from './src/types';
 
 function App(): React.JSX.Element {
   // 1. Setup local UI state (Equivalent to @State in SwiftUI)
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [tokens, setTokens] = useState<SpotifyTokens | null>(null);
+  const [profileName, setProfileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 2. Button Action Handler (Equivalent to an async function triggered by a SwiftUI button)
   const handleSpotifyConnect = async () => {
     setIsLoading(true);
     setErrorMessage(null);
-    
+
     try {
       const activeTokens = await SpotifyLoginController.executeLogin();
       setTokens(activeTokens);
       console.log('Successfully authenticated with Spotify! Access Token:', activeTokens.accessToken);
+
+      // Smoke test of the new network layer: authenticated call through
+      // SpotifyApiClient (store -> bearer header -> real Spotify response).
+      const me = await SpotifyApiClient.request<{display_name: string; id: string}>('/me');
+      console.log('SpotifyApiClient /me OK:', me?.display_name, `(${me?.id})`);
+      setProfileName(me?.display_name ?? me?.id ?? 'Unknown');
     } catch (error: any) {
       setErrorMessage(error.message || 'Authentication sequence failed.');
       console.log('Auth Notice:', error.message);
@@ -43,6 +51,9 @@ function App(): React.JSX.Element {
         {tokens ? (
           <View style={styles.statusSuccessCard}>
             <Text style={styles.successText}>✅ Connected to Spotify Cloud</Text>
+            {profileName && (
+              <Text style={styles.successText}>👤 {profileName}</Text>
+            )}
             <Text style={styles.tokenDataText} numberOfLines={1}>
               Token: {tokens.accessToken}
             </Text>

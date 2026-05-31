@@ -9,7 +9,7 @@
     "isolatedModules": true,
     "strict": true,
     "moduleResolution": "node", // Force standard Node resolution
-    "ignoreDeprecations": "6.0", // Silences moduleResolution version warnings
+    "ignoreDeprecations": "5.0", // Silences moduleResolution version warnings
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
