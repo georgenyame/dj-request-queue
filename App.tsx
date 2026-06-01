@@ -11,8 +11,11 @@ import {
 import { SpotifyLoginController } from './src/SpotifyLoginController';
 import { SpotifyApiClient } from './src/services/SpotifyApiClient';
 import { NowPlayingCard } from './src/components/NowPlayingCard';
+import { SongSearchInput } from './src/components/SongSearchInput';
+import { RequestQueue } from './src/components/RequestQueue';
 import { useNowPlaying } from './src/hooks/useNowPlaying';
 import { SpotifyTokens } from './src/types';
+import { GuestRequest, TrackItem } from './src/types/queue';
 
 function App(): React.JSX.Element {
   // 1. Setup local UI state (Equivalent to @State in SwiftUI)
@@ -20,9 +23,22 @@ function App(): React.JSX.Element {
   const [tokens, setTokens] = useState<SpotifyTokens | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [requests, setRequests] = useState<GuestRequest[]>([]);
 
   // Live "Now Playing" polling, active only once authenticated.
   const { playback, error: playbackError } = useNowPlaying(!!tokens);
+
+  // Ingest a selected search result into the live request queue.
+  const handleSelectTrack = (track: TrackItem) => {
+    const timestamp = Date.now();
+    const request: GuestRequest = {
+      id: `${track.id}-${timestamp}`,
+      track,
+      votes: 1,
+      timestamp,
+    };
+    setRequests(prev => [request, ...prev]);
+  };
 
   // 2. Button Action Handler (Equivalent to an async function triggered by a SwiftUI button)
   const handleSpotifyConnect = async () => {
@@ -47,14 +63,15 @@ function App(): React.JSX.Element {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.windowContainer}>
-      <View style={styles.centerCard}>
-        <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
-        <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
+  if (tokens) {
+    return (
+      <SafeAreaView style={styles.windowContainer}>
+        <View style={styles.dashboard}>
+          {/* Left pane: connection status + live now playing */}
+          <View style={styles.leftPane}>
+            <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
+            <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
 
-        {tokens ? (
-          <>
             <View style={styles.statusSuccessCard}>
               <Text style={styles.successText}>✅ Connected to Spotify Cloud</Text>
               {profileName && (
@@ -62,20 +79,36 @@ function App(): React.JSX.Element {
               )}
             </View>
             <NowPlayingCard playback={playback} error={playbackError} />
-          </>
-        ) : (
-          <TouchableOpacity 
-            style={styles.connectButton} 
-            onPress={handleSpotifyConnect}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Connect Spotify Account</Text>
-            )}
-          </TouchableOpacity>
-        )}
+          </View>
+
+          {/* Right pane: guest search on top + scrollable request queue */}
+          <View style={styles.rightPane}>
+            <Text style={styles.paneHeading}>Guest Requests</Text>
+            <SongSearchInput onSelect={handleSelectTrack} />
+            <RequestQueue requests={requests} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.windowContainer}>
+      <View style={styles.centerCard}>
+        <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
+        <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
+
+        <TouchableOpacity
+          style={styles.connectButton}
+          onPress={handleSpotifyConnect}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Connect Spotify Account</Text>
+          )}
+        </TouchableOpacity>
 
         {errorMessage && (
           <Text style={styles.errorBannerText}>{errorMessage}</Text>
@@ -92,6 +125,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1E24', // Sleek dark slate theme for the DJ booth
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  dashboard: {
+    flex: 1,
+    flexDirection: 'row',
+    width: '100%',
+    padding: 24,
+  },
+  leftPane: {
+    width: 400,
+    marginRight: 24,
+  },
+  rightPane: {
+    flex: 1,
+    backgroundColor: '#2A2A32',
+    borderRadius: 12,
+    padding: 20,
+  },
+  paneHeading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 12,
   },
   centerCard: {
     padding: 30,
