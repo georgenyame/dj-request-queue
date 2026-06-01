@@ -66,6 +66,10 @@ yarn-error.log
 # testing
 /coverage
 
+# Supabase / Phase 2 secrets (copy from *.example templates)
+src/config/supabase.config.ts
+guest-web/.env.local
+
 # Yarn
 .yarn/*
 !.yarn/patches
