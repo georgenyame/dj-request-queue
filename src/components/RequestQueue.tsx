@@ -58,6 +58,9 @@ export function RequestQueue({
             <Text style={styles.artist} numberOfLines={1}>
               {request.track.artist}
             </Text>
+            <Text style={styles.guestName} numberOfLines={1}>
+              Requested by {request.guestName}
+            </Text>
           </View>
           <RequestActions
             request={request}
@@ -79,7 +82,10 @@ function RequestActions({
   onApprove: (requestId: string) => void;
   onDecline: (requestId: string) => void;
 }): React.JSX.Element {
-  if (request.status === 'pending' && request.syncStatus === 'idle') {
+  if (
+    request.status === 'pending' &&
+    (request.syncStatus === 'idle' || request.syncStatus === 'failed')
+  ) {
     return (
       <View style={styles.actionGroup}>
         <TouchableOpacity
@@ -189,6 +195,11 @@ const styles = StyleSheet.create({
   artist: {
     color: '#9A9AA4',
     fontSize: 12,
+    marginTop: 2,
+  },
+  guestName: {
+    color: '#6A6A74',
+    fontSize: 11,
     marginTop: 2,
   },
   actionGroup: {

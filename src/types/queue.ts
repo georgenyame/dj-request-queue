@@ -16,9 +16,22 @@ export type RequestStatus = 'pending' | 'approved' | 'declined';
 export type SyncStatus = 'idle' | 'submitting' | 'synced' | 'failed';
 
 export interface GuestRequest {
-  id: string; // unique request id: `${track.id}-${timestamp}`
+  id: string; // Supabase UUID
   track: TrackItem;
-  timestamp: number; // epoch ms, for sort priority
+  guestName: string;
+  timestamp: number; // epoch ms from created_at
   status: RequestStatus;
   syncStatus: SyncStatus;
+}
+
+/** Row shape from public.requests (Supabase). */
+export interface RequestRow {
+  id: string;
+  track_id: string;
+  title: string;
+  artist: string;
+  artwork_url: string;
+  guest_name: string;
+  status: RequestStatus;
+  created_at: string;
 }

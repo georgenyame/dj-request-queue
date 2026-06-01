@@ -8,10 +8,12 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "js-sha256": "^0.11.1",
     "react": "18.3.1",
     "react-native": "0.76.3",
-    "react-native-macos": "0.76.3"
+    "react-native-macos": "0.76.3",
+    "react-native-url-polyfill": "^3.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

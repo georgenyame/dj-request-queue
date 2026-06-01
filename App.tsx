@@ -13,37 +13,31 @@ import { SpotifyLoginController } from './src/SpotifyLoginController';
 import { SpotifyApiClient } from './src/services/SpotifyApiClient';
 import { SpotifyPlaylistService } from './src/services/SpotifyPlaylistService';
 import { NowPlayingCard } from './src/components/NowPlayingCard';
-import { SongSearchInput } from './src/components/SongSearchInput';
 import { RequestQueue } from './src/components/RequestQueue';
 import { useNowPlaying } from './src/hooks/useNowPlaying';
+import { useRealtimeRequests } from './src/hooks/useRealtimeRequests';
 import { SpotifyTokens } from './src/types';
 import { SPOTIFY_CONFIG } from './src/spotifyConfig';
-import { GuestRequest, TrackItem } from './src/types/queue';
 import { SpotifyTokenStore } from './src/services/SpotifyTokenStore';
+import {
+  approveRequest,
+  declineRequest,
+} from './src/services/RequestSyncService';
 
 function App(): React.JSX.Element {
-  // 1. Setup local UI state (Equivalent to @State in SwiftUI)
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [tokens, setTokens] = useState<SpotifyTokens | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [requests, setRequests] = useState<GuestRequest[]>([]);
 
-  // Live "Now Playing" polling, active only once authenticated.
+  const {
+    requests,
+    loading: requestsLoading,
+    error: requestsError,
+    setSyncStatus,
+  } = useRealtimeRequests();
+
   const { playback, error: playbackError } = useNowPlaying(!!tokens);
-
-  // Simulate an incoming guest request (search stands in until the QR guest app exists).
-  const handleSelectTrack = (track: TrackItem) => {
-    const timestamp = Date.now();
-    const request: GuestRequest = {
-      id: `${track.id}-${timestamp}`,
-      track,
-      timestamp,
-      status: 'pending',
-      syncStatus: 'idle',
-    };
-    setRequests(prev => [request, ...prev]);
-  };
 
   const handleApprove = async (requestId: string) => {
     const request = requests.find(r => r.id === requestId);
@@ -60,31 +54,14 @@ function App(): React.JSX.Element {
       return;
     }
 
-    setRequests(prev =>
-      prev.map(req =>
-        req.id === requestId
-          ? { ...req, status: 'approved', syncStatus: 'submitting' }
-          : req,
-      ),
-    );
+    setSyncStatus(requestId, 'submitting');
 
     try {
       await SpotifyPlaylistService.addTrack(playlistId, request.track.id);
-      setRequests(prev =>
-        prev.map(req =>
-          req.id === requestId
-            ? { ...req, status: 'approved', syncStatus: 'synced' }
-            : req,
-        ),
-      );
+      await approveRequest(requestId);
+      setSyncStatus(requestId, 'synced');
     } catch (err: any) {
-      setRequests(prev =>
-        prev.map(req =>
-          req.id === requestId
-            ? { ...req, status: 'approved', syncStatus: 'failed' }
-            : req,
-        ),
-      );
+      setSyncStatus(requestId, 'failed');
       Alert.alert(
         'Could not add to playlist',
         err?.message ??
@@ -93,24 +70,28 @@ function App(): React.JSX.Element {
     }
   };
 
-  const handleDecline = (requestId: string) => {
-    setRequests(prev =>
-      prev.map(req =>
-        req.id === requestId
-          ? { ...req, status: 'declined', syncStatus: 'idle' }
-          : req,
-      ),
-    );
+  const handleDecline = async (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (!request || request.status !== 'pending') {
+      return;
+    }
+
+    try {
+      await declineRequest(requestId);
+    } catch (err: any) {
+      Alert.alert(
+        'Could not decline request',
+        err?.message ?? 'Failed to update request status in Supabase.',
+      );
+    }
   };
 
   const handleDisconnect = () => {
     SpotifyTokenStore.getInstance().clear();
     setTokens(null);
     setProfileName(null);
-    setRequests([]);
   };
 
-  // 2. Button Action Handler (Equivalent to an async function triggered by a SwiftUI button)
   const handleSpotifyConnect = async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -120,8 +101,6 @@ function App(): React.JSX.Element {
       setTokens(activeTokens);
       console.log('Successfully authenticated with Spotify! Access Token:', activeTokens.accessToken);
 
-      // Smoke test of the new network layer: authenticated call through
-      // SpotifyApiClient (store -> bearer header -> real Spotify response).
       const me = await SpotifyApiClient.request<{display_name: string; id: string}>('/me');
       console.log('SpotifyApiClient /me OK:', me?.display_name, `(${me?.id})`);
       setProfileName(me?.display_name ?? me?.id ?? 'Unknown');
@@ -137,7 +116,6 @@ function App(): React.JSX.Element {
     return (
       <SafeAreaView style={styles.windowContainer}>
         <View style={styles.dashboard}>
-          {/* Left pane: connection status + live now playing */}
           <View style={styles.leftPane}>
             <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
             <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
@@ -154,18 +132,27 @@ function App(): React.JSX.Element {
             <NowPlayingCard playback={playback} error={playbackError} />
           </View>
 
-          {/* Right pane: DJ inbox (search simulates guest submissions for now) */}
           <View style={styles.rightPane}>
             <Text style={styles.paneHeading}>DJ Inbox</Text>
             <Text style={styles.paneSubheading}>
-              Simulate guest request (search below until QR flow is live)
+              Live guest requests from the QR web app
             </Text>
-            <SongSearchInput onSelect={handleSelectTrack} />
-            <RequestQueue
-              requests={requests}
-              onApprove={handleApprove}
-              onDecline={handleDecline}
-            />
+            {requestsLoading ? (
+              <View style={styles.inboxLoading}>
+                <ActivityIndicator color="#1DB954" />
+                <Text style={styles.inboxLoadingText}>Loading requests…</Text>
+              </View>
+            ) : requestsError ? (
+              <View style={styles.inboxError}>
+                <Text style={styles.inboxErrorText}>{requestsError}</Text>
+              </View>
+            ) : (
+              <RequestQueue
+                requests={requests}
+                onApprove={handleApprove}
+                onDecline={handleDecline}
+              />
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -198,11 +185,10 @@ function App(): React.JSX.Element {
   );
 }
 
-// 3. Declarative Layout Styling (Think of this like your SwiftUI inline view modifiers)
 const styles = StyleSheet.create({
   windowContainer: {
     flex: 1,
-    backgroundColor: '#1E1E24', // Sleek dark slate theme for the DJ booth
+    backgroundColor: '#1E1E24',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -233,6 +219,29 @@ const styles = StyleSheet.create({
     color: '#8A8A94',
     marginBottom: 12,
   },
+  inboxLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  inboxLoadingText: {
+    color: '#8A8A94',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  inboxError: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 16,
+  },
+  inboxErrorText: {
+    color: '#FF6B6B',
+    fontSize: 13,
+    textAlign: 'center',
+  },
   centerCard: {
     padding: 30,
     borderRadius: 12,
@@ -252,7 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   connectButton: {
-    backgroundColor: '#1DB954', // Spotify Green
+    backgroundColor: '#1DB954',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
@@ -284,12 +293,6 @@ const styles = StyleSheet.create({
     color: '#A0A0AA',
     fontSize: 12,
     textDecorationLine: 'underline',
-  },
-  tokenDataText: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 4,
-    fontFamily: 'Courier',
   },
   errorBannerText: {
     color: '#FF6B6B',

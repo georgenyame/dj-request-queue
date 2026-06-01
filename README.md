@@ -2,7 +2,7 @@
 
 A macOS desktop app for DJs to run a live song-request ecosystem — built with [React Native for macOS](https://microsoft.github.io/react-native-windows/). It connects to **Spotify** so a DJ can authenticate and (ultimately) manage a crowd-driven request queue and playlists during an event.
 
-> Status: early MVP. Spotify login (OAuth2 + PKCE) is working; the request queue and playlist features are in progress.
+> Status: Phase 2 — guest web + Supabase Realtime sync. Spotify login and approve-to-playlist flow working; see [Phase 2 setup](docs/PHASE2_SETUP.md).
 
 ## Platform
 
@@ -60,6 +60,21 @@ The app uses the **Authorization Code + PKCE** flow (no client secret is embedde
 3. Put your client ID in `src/spotifyConfig.ts`.
 
 The `djcommandcenter://` URL scheme is registered in `macos/DJCommandCenter-macOS/Info.plist`, and the `AppDelegate` forwards the redirect to React Native's `Linking` API.
+
+## Phase 2: Guest requests (Supabase)
+
+Guests request songs from **`guest-web/`** (Vite React); the DJ macOS inbox updates live via Supabase Realtime.
+
+| Component | Location |
+|-----------|----------|
+| DB migration + RLS | `supabase/migrations/001_requests.sql` |
+| Spotify search proxy | `supabase/functions/search-tracks/` |
+| DJ Realtime inbox | `src/hooks/useRealtimeRequests.ts`, `App.tsx` |
+| Guest mobile web | `guest-web/` |
+
+**Setup:** [docs/PHASE2_SETUP.md](docs/PHASE2_SETUP.md) — Supabase project, Edge Function secrets, DJ `supabase.config.ts`, deploy guest web, QR URL.
+
+**E2E checklist:** [docs/E2E_TEST.md](docs/E2E_TEST.md)
 
 ## Project structure
 
