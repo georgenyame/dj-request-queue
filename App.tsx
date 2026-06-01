@@ -7,15 +7,19 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SpotifyLoginController } from './src/SpotifyLoginController';
 import { SpotifyApiClient } from './src/services/SpotifyApiClient';
+import { SpotifyPlaylistService } from './src/services/SpotifyPlaylistService';
 import { NowPlayingCard } from './src/components/NowPlayingCard';
 import { SongSearchInput } from './src/components/SongSearchInput';
 import { RequestQueue } from './src/components/RequestQueue';
 import { useNowPlaying } from './src/hooks/useNowPlaying';
 import { SpotifyTokens } from './src/types';
+import { SPOTIFY_CONFIG } from './src/spotifyConfig';
 import { GuestRequest, TrackItem } from './src/types/queue';
+import { SpotifyTokenStore } from './src/services/SpotifyTokenStore';
 
 function App(): React.JSX.Element {
   // 1. Setup local UI state (Equivalent to @State in SwiftUI)
@@ -28,16 +32,82 @@ function App(): React.JSX.Element {
   // Live "Now Playing" polling, active only once authenticated.
   const { playback, error: playbackError } = useNowPlaying(!!tokens);
 
-  // Ingest a selected search result into the live request queue.
+  // Simulate an incoming guest request (search stands in until the QR guest app exists).
   const handleSelectTrack = (track: TrackItem) => {
     const timestamp = Date.now();
     const request: GuestRequest = {
       id: `${track.id}-${timestamp}`,
       track,
-      votes: 1,
       timestamp,
+      status: 'pending',
+      syncStatus: 'idle',
     };
     setRequests(prev => [request, ...prev]);
+  };
+
+  const handleApprove = async (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (!request || request.status !== 'pending') {
+      return;
+    }
+
+    const playlistId = SPOTIFY_CONFIG.requestsPlaylistId.trim();
+    if (!playlistId) {
+      Alert.alert(
+        'Requests playlist not configured',
+        'Set requestsPlaylistId in src/spotifyConfig.ts to your existing Requests playlist id.',
+      );
+      return;
+    }
+
+    setRequests(prev =>
+      prev.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'approved', syncStatus: 'submitting' }
+          : req,
+      ),
+    );
+
+    try {
+      await SpotifyPlaylistService.addTrack(playlistId, request.track.id);
+      setRequests(prev =>
+        prev.map(req =>
+          req.id === requestId
+            ? { ...req, status: 'approved', syncStatus: 'synced' }
+            : req,
+        ),
+      );
+    } catch (err: any) {
+      setRequests(prev =>
+        prev.map(req =>
+          req.id === requestId
+            ? { ...req, status: 'approved', syncStatus: 'failed' }
+            : req,
+        ),
+      );
+      Alert.alert(
+        'Could not add to playlist',
+        err?.message ??
+          'Failed to add the track to the Requests playlist. Check your Spotify permissions.',
+      );
+    }
+  };
+
+  const handleDecline = (requestId: string) => {
+    setRequests(prev =>
+      prev.map(req =>
+        req.id === requestId
+          ? { ...req, status: 'declined', syncStatus: 'idle' }
+          : req,
+      ),
+    );
+  };
+
+  const handleDisconnect = () => {
+    SpotifyTokenStore.getInstance().clear();
+    setTokens(null);
+    setProfileName(null);
+    setRequests([]);
   };
 
   // 2. Button Action Handler (Equivalent to an async function triggered by a SwiftUI button)
@@ -78,14 +148,24 @@ function App(): React.JSX.Element {
                 <Text style={styles.successText}>👤 {profileName}</Text>
               )}
             </View>
+            <TouchableOpacity style={styles.reconnectButton} onPress={handleDisconnect}>
+              <Text style={styles.reconnectButtonText}>Reconnect Spotify</Text>
+            </TouchableOpacity>
             <NowPlayingCard playback={playback} error={playbackError} />
           </View>
 
-          {/* Right pane: guest search on top + scrollable request queue */}
+          {/* Right pane: DJ inbox (search simulates guest submissions for now) */}
           <View style={styles.rightPane}>
-            <Text style={styles.paneHeading}>Guest Requests</Text>
+            <Text style={styles.paneHeading}>DJ Inbox</Text>
+            <Text style={styles.paneSubheading}>
+              Simulate guest request (search below until QR flow is live)
+            </Text>
             <SongSearchInput onSelect={handleSelectTrack} />
-            <RequestQueue requests={requests} />
+            <RequestQueue
+              requests={requests}
+              onApprove={handleApprove}
+              onDecline={handleDecline}
+            />
           </View>
         </View>
       </SafeAreaView>
@@ -146,6 +226,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  paneSubheading: {
+    fontSize: 12,
+    color: '#8A8A94',
     marginBottom: 12,
   },
   centerCard: {
@@ -189,6 +274,16 @@ const styles = StyleSheet.create({
   successText: {
     color: '#4BB543',
     fontWeight: 'bold',
+  },
+  reconnectButton: {
+    marginTop: 8,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  reconnectButtonText: {
+    color: '#A0A0AA',
+    fontSize: 12,
+    textDecorationLine: 'underline',
   },
   tokenDataText: {
     color: '#888',
