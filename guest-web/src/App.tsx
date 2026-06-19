@@ -97,8 +97,19 @@ function App() {
 
       {!configured && (
         <div className="config-banner">
-          Missing environment variables. Copy <code>.env.example</code> to{' '}
-          <code>.env.local</code> and fill in Supabase + search function URLs.
+          {import.meta.env.PROD ? (
+            <>
+              Missing environment variables on this deployment. In the Vercel project{' '}
+              <strong>dj-booth-request</strong>, add <code>VITE_SUPABASE_URL</code>,{' '}
+              <code>VITE_SUPABASE_ANON_KEY</code>, and <code>VITE_SUPABASE_FUNCTION_URL</code>{' '}
+              under Settings → Environment Variables, then redeploy.
+            </>
+          ) : (
+            <>
+              Missing environment variables. Copy <code>.env.example</code> to{' '}
+              <code>.env.local</code> and fill in Supabase + search function URLs.
+            </>
+          )}
         </div>
       )}
 

@@ -72,7 +72,7 @@ cp src/config/supabase.config.example.ts src/config/supabase.config.ts
 ```sh
 cd guest-web
 cp .env.example .env.local
-# Edit VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SEARCH_FUNCTION_URL
+# Edit VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_SUPABASE_FUNCTION_URL
 npm install
 npm run dev
 ```
@@ -87,7 +87,7 @@ Open `http://localhost:5173` on your phone (same Wi‑Fi) or use a tunnel (ngrok
 2. Add environment variables (same as `.env.example`):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_SEARCH_FUNCTION_URL`
+   - `VITE_SUPABASE_FUNCTION_URL`
 3. Deploy. Production URL example: `https://dj-requests.vercel.app`
 
 `guest-web/vercel.json` is included for SPA routing.
@@ -129,7 +129,7 @@ Connect Spotify, then watch **DJ Inbox** — guest submissions appear via Realti
 |-------|--------|
 | DJ inbox empty after guest submit | Realtime enabled on `requests`; service role key in DJ config |
 | Guest insert fails | RLS policies applied; anon key in guest `.env.local` |
-| Search fails | Edge Function deployed; Spotify secrets set; `VITE_SEARCH_FUNCTION_URL` correct |
+| Search fails | Edge Function deployed; Spotify secrets set; `VITE_SUPABASE_FUNCTION_URL` correct |
 | Approve fails Spotify | Same as Phase 1 — playlist ID, scopes, `/items` endpoint |
 | Approve fails after Spotify OK | Service role key; network |
 

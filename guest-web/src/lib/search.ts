@@ -1,6 +1,15 @@
 import type { TrackItem } from '../types';
 
-const searchFunctionUrl = import.meta.env.VITE_SEARCH_FUNCTION_URL ?? '';
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
+const configuredSearchUrl =
+  import.meta.env.VITE_SUPABASE_FUNCTION_URL ??
+  import.meta.env.VITE_SEARCH_FUNCTION_URL ??
+  '';
+
+/** Edge Function path is fixed; derive from project URL when the explicit env var is absent. */
+const searchFunctionUrl =
+  configuredSearchUrl ||
+  (supabaseUrl ? `${supabaseUrl}/functions/v1/search-tracks` : '');
 
 export function isSearchConfigured(): boolean {
   return Boolean(searchFunctionUrl);
