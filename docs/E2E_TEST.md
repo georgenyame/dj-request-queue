@@ -9,7 +9,7 @@ Run this after completing [PHASE2_SETUP.md](./PHASE2_SETUP.md) with real Supabas
 - [ ] `src/config/supabase.config.ts` filled (DJ service role key)
 - [ ] Guest web running locally or deployed with `.env.local` / Vercel env vars
 - [ ] DJ macOS app built with `@supabase/supabase-js` installed
-- [ ] Spotify connected in DJ app; `requestsPlaylistId` set in `src/spotifyConfig.ts`
+- [ ] Spotify connected in DJ app; requests playlist created or chosen in the sidebar
 
 ## Test flow
 

@@ -14,13 +14,15 @@ import { SpotifyApiClient } from './src/services/SpotifyApiClient';
 import { SpotifyPlaylistService } from './src/services/SpotifyPlaylistService';
 import { NowPlayingCard } from './src/components/NowPlayingCard';
 import { RequestQueue } from './src/components/RequestQueue';
+import { RequestsPlaylistPicker } from './src/components/RequestsPlaylistPicker';
 import { useNowPlaying } from './src/hooks/useNowPlaying';
 import { useRealtimeRequests } from './src/hooks/useRealtimeRequests';
+import { useRequestsPlaylist } from './src/hooks/useRequestsPlaylist';
 import { SpotifyTokens } from './src/types';
-import { SPOTIFY_CONFIG } from './src/spotifyConfig';
 import { SpotifyTokenStore } from './src/services/SpotifyTokenStore';
 import {
   approveRequest,
+  clearAllRequests,
   declineRequest,
 } from './src/services/RequestSyncService';
 
@@ -29,15 +31,18 @@ function App(): React.JSX.Element {
   const [tokens, setTokens] = useState<SpotifyTokens | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [clearingInbox, setClearingInbox] = useState<boolean>(false);
 
   const {
     requests,
     loading: requestsLoading,
     error: requestsError,
     setSyncStatus,
+    setRequests,
   } = useRealtimeRequests();
 
   const { playback, error: playbackError } = useNowPlaying(!!tokens);
+  const requestsPlaylist = useRequestsPlaylist(!!tokens);
 
   const handleApprove = async (requestId: string) => {
     const request = requests.find(r => r.id === requestId);
@@ -45,11 +50,11 @@ function App(): React.JSX.Element {
       return;
     }
 
-    const playlistId = SPOTIFY_CONFIG.requestsPlaylistId.trim();
+    const playlistId = requestsPlaylist.selected?.id;
     if (!playlistId) {
       Alert.alert(
-        'Requests playlist not configured',
-        'Set requestsPlaylistId in src/spotifyConfig.ts to your existing Requests playlist id.',
+        'No requests playlist selected',
+        'Choose or create a Spotify playlist in the sidebar before approving requests.',
       );
       return;
     }
@@ -84,6 +89,38 @@ function App(): React.JSX.Element {
         err?.message ?? 'Failed to update request status in Supabase.',
       );
     }
+  };
+
+  const handleClearInbox = () => {
+    if (requests.length === 0 || clearingInbox) {
+      return;
+    }
+
+    Alert.alert(
+      'Clear inbox?',
+      'This removes all guest requests from the inbox. Tracks already added to your Spotify Requests playlist are not affected.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear inbox',
+          style: 'destructive',
+          onPress: async () => {
+            setClearingInbox(true);
+            try {
+              await clearAllRequests();
+              setRequests([]);
+            } catch (err: any) {
+              Alert.alert(
+                'Could not clear inbox',
+                err?.message ?? 'Failed to delete requests from Supabase.',
+              );
+            } finally {
+              setClearingInbox(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleDisconnect = () => {
@@ -129,14 +166,45 @@ function App(): React.JSX.Element {
             <TouchableOpacity style={styles.reconnectButton} onPress={handleDisconnect}>
               <Text style={styles.reconnectButtonText}>Reconnect Spotify</Text>
             </TouchableOpacity>
+            <RequestsPlaylistPicker
+              selected={requestsPlaylist.selected}
+              playlists={requestsPlaylist.playlists}
+              loadingSaved={requestsPlaylist.loadingSaved}
+              loadingPlaylists={requestsPlaylist.loadingPlaylists}
+              creatingPlaylist={requestsPlaylist.creatingPlaylist}
+              error={requestsPlaylist.error}
+              expanded={requestsPlaylist.expanded}
+              onToggleExpanded={requestsPlaylist.toggleExpanded}
+              onSelect={requestsPlaylist.selectPlaylist}
+              onCreate={requestsPlaylist.createPlaylist}
+            />
             <NowPlayingCard playback={playback} error={playbackError} />
           </View>
 
           <View style={styles.rightPane}>
-            <Text style={styles.paneHeading}>DJ Inbox</Text>
-            <Text style={styles.paneSubheading}>
-              Live guest requests from the QR web app
-            </Text>
+            <View style={styles.inboxHeader}>
+              <View style={styles.inboxHeaderText}>
+                <Text style={styles.paneHeading}>DJ Inbox</Text>
+                <Text style={styles.paneSubheading}>
+                  Live guest requests from the QR web app
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.clearInboxButton,
+                  (requests.length === 0 || clearingInbox) && styles.clearInboxButtonDisabled,
+                ]}
+                onPress={handleClearInbox}
+                disabled={requests.length === 0 || clearingInbox}
+                accessibilityLabel="Clear inbox"
+              >
+                {clearingInbox ? (
+                  <ActivityIndicator color="#9A9AA4" size="small" />
+                ) : (
+                  <Text style={styles.clearInboxButtonText}>Clear inbox</Text>
+                )}
+              </TouchableOpacity>
+            </View>
             {requestsLoading ? (
               <View style={styles.inboxLoading}>
                 <ActivityIndicator color="#1DB954" />
@@ -208,6 +276,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
   },
+  inboxHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
+  },
+  inboxHeaderText: {
+    flex: 1,
+  },
   paneHeading: {
     fontSize: 18,
     fontWeight: '700',
@@ -217,7 +295,24 @@ const styles = StyleSheet.create({
   paneSubheading: {
     fontSize: 12,
     color: '#8A8A94',
-    marginBottom: 12,
+  },
+  clearInboxButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#5A5A64',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearInboxButtonDisabled: {
+    opacity: 0.45,
+  },
+  clearInboxButtonText: {
+    color: '#9A9AA4',
+    fontSize: 12,
+    fontWeight: '600',
   },
   inboxLoading: {
     flex: 1,

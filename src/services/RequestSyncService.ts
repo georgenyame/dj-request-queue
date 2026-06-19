@@ -56,3 +56,16 @@ export async function declineRequest(id: string): Promise<void> {
     throw new Error(`Failed to decline request: ${error.message}`);
   }
 }
+
+/** Removes every row from the inbox. Does not change the Spotify Requests playlist. */
+export async function clearAllRequests(): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('requests')
+    .delete()
+    .gte('created_at', '1970-01-01T00:00:00Z');
+
+  if (error) {
+    throw new Error(`Failed to clear inbox: ${error.message}`);
+  }
+}
