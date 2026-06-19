@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { isSearchConfigured, searchTracks } from './lib/search';
-import { isSupabaseConfigured, submitRequest } from './lib/supabase';
+import { isGuestAppConfigured } from './lib/env';
+import { searchTracks } from './lib/search';
+import { submitRequest } from './lib/supabase';
 import type { TrackItem } from './types';
 import './App.css';
 
@@ -15,7 +16,7 @@ function App() {
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const configured = isSupabaseConfigured && isSearchConfigured();
+  const configured = isGuestAppConfigured();
 
   useEffect(() => {
     if (!toast) {

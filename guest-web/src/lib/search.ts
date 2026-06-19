@@ -1,21 +1,12 @@
 import type { TrackItem } from '../types';
-
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
-const configuredSearchUrl =
-  import.meta.env.VITE_SUPABASE_FUNCTION_URL ??
-  import.meta.env.VITE_SEARCH_FUNCTION_URL ??
-  '';
-
-/** Edge Function path is fixed; derive from project URL when the explicit env var is absent. */
-const searchFunctionUrl =
-  configuredSearchUrl ||
-  (supabaseUrl ? `${supabaseUrl}/functions/v1/search-tracks` : '');
+import { guestEnv, isGuestAppConfigured } from './env';
 
 export function isSearchConfigured(): boolean {
-  return Boolean(searchFunctionUrl);
+  return isGuestAppConfigured();
 }
 
 export async function searchTracks(query: string, limit = 5): Promise<TrackItem[]> {
+  const searchFunctionUrl = guestEnv.searchFunctionUrl;
   if (!searchFunctionUrl) {
     throw new Error('Search function URL is not configured.');
   }

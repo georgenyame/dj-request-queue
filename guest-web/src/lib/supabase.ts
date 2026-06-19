@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { guestEnv, isGuestAppConfigured } from './env';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+export { isGuestAppConfigured };
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = isGuestAppConfigured;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(guestEnv.supabaseUrl, guestEnv.supabaseAnonKey);
 
 export interface SubmitRequestInput {
   trackId: string;
