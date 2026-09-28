@@ -9,7 +9,7 @@ import { SpotifyTokenStore } from './services/SpotifyTokenStore';
 export class SpotifyLoginController {
   /**
    * Runs the Authorization Code + PKCE flow the React Native way:
-   * open the system browser, then catch the `djcommandcenter://callback`
+   * open the system browser, then catch the `cue://callback`
    * redirect via the Linking API (no local HTTP server, no client secret).
    */
   static async executeLogin(): Promise<SpotifyTokens> {

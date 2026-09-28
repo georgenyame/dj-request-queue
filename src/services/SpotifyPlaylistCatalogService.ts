@@ -41,7 +41,7 @@ export class SpotifyPlaylistCatalogService {
         method: 'POST',
         body: JSON.stringify({
           name,
-          description: 'Guest song requests from DJ Command Center',
+          description: 'Guest song requests from Cue',
           public: false,
         }),
       },

@@ -154,7 +154,7 @@ function App(): React.JSX.Element {
       <SafeAreaView style={styles.windowContainer}>
         <View style={styles.dashboard}>
           <View style={styles.leftPane}>
-            <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
+            <Text style={styles.titleText}>🎛️ Cue</Text>
             <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
 
             <View style={styles.statusSuccessCard}>
@@ -230,7 +230,7 @@ function App(): React.JSX.Element {
   return (
     <SafeAreaView style={styles.windowContainer}>
       <View style={styles.centerCard}>
-        <Text style={styles.titleText}>🎛️ DJCommandCenter</Text>
+        <Text style={styles.titleText}>🎛️ Cue</Text>
         <Text style={styles.subtitleText}>Wedding Request Ecosystem Engine</Text>
 
         <TouchableOpacity

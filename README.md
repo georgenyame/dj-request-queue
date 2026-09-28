@@ -1,4 +1,6 @@
-# DJ Command Center
+# Cue
+
+> Formerly **DJ Command Center**. See [Renamed from DJ Command Center](#renamed-from-dj-command-center) if you have an existing checkout or Spotify app.
 
 macOS app for DJs running live Spotify song requests at events. Guests submit tracks from a mobile web client; requests appear in a real-time DJ inbox; approved songs sync to a Spotify playlist.
 
@@ -31,7 +33,9 @@ pod install --project-directory=macos
 npm run macos
 ```
 
-**Spotify:** Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), add redirect URI `djcommandcenter://callback`, and set your client ID in `src/spotifyConfig.ts`.
+To build from Xcode instead, open `macos/Cue.xcworkspace` and run the `Cue-macOS` scheme.
+
+**Spotify:** Create an app in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), add redirect URI `cue://callback`, and set your client ID in `src/spotifyConfig.ts`.
 
 **Guest requests (optional):** [docs/PHASE2_SETUP.md](docs/PHASE2_SETUP.md) (Supabase project, Edge Function secrets, guest web deploy).
 
@@ -44,13 +48,31 @@ App.tsx                 DJ UI entry
 src/                    Spotify auth, Realtime inbox, playlist sync
 guest-web/              Guest song-request web app
 supabase/               Migrations, Edge Functions (e.g. search-tracks)
-macos/                  Native macOS Xcode project
+macos/                  Native macOS Xcode project (Cue.xcworkspace, Cue-macOS target)
 docs/                   Setup and testing guides
 ```
+
+## App identity
+
+| Item | Value |
+|------|-------|
+| App / module name | `Cue` |
+| Bundle ID | `com.georgenyame.cue` |
+| URL scheme | `cue://` (Spotify redirect: `cue://callback`) |
+| Xcode | `macos/Cue.xcworkspace`, scheme `Cue-macOS` |
 
 ## Platform notes
 
 macOS-only (`react-native-macos`). No iOS or Android targets. Local `patch-package` fixes for `react-native-macos@0.76.3` are applied on `npm install` (see `patches/`).
+
+## Renamed from DJ Command Center
+
+The project was renamed from DJ Command Center (`DJCommandCenter`) to Cue. If you're updating an existing checkout or setup:
+
+- **Spotify:** add `cue://callback` as a redirect URI in the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard). The old `djcommandcenter://callback` URI is no longer used.
+- **Xcode / CocoaPods:** the project is now `macos/Cue.xcworkspace`. Re-run `pod install --project-directory=macos` and delete `macos/build` if you have stale build output.
+- **Saved data:** the bundle ID changed from `org.reactjs.native.DJCommandCenter` to `com.georgenyame.cue`, so macOS treats Cue as a new app. To keep your saved Requests playlist, copy `~/Library/Application Support/org.reactjs.native.DJCommandCenter` to `~/Library/Application Support/com.georgenyame.cue` before first launch; Cue migrates the old storage key automatically.
+- **GitHub:** the repository is still `dj-request-queue`.
 
 ## License
 

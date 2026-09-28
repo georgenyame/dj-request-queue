@@ -1,4 +1,4 @@
--- Phase 2: shared guest request bus for DJ Command Center
+-- Phase 2: shared guest request bus for Cue
 
 create table public.requests (
   id uuid primary key default gen_random_uuid(),
